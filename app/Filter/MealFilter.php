@@ -24,6 +24,7 @@ class MealFilter
     {
         $withParam = [];
 
+        //To prevent undefined relations
         if (in_array('tags', $this->with)) {
             array_push($withParam, 'MealTag');
         }
@@ -33,51 +34,60 @@ class MealFilter
         if (in_array('category', $this->with)) {
             array_push($withParam, 'MealCategory');
         }
-        if ($this->tags != null) {
-            $t = explode(',', $this->tags);
-            $tags = MealTag::findMany($t)->pluck('id');
-            if ($this->time != null) {
-                $meals = MealItem::withTrashed()->with($withParam)->orWhereHas('MealTag', function ($q) use ($tags) {
-                    $q->whereIn('id', $tags);
-                }, '>=', count($tags))->has('MealIngredient');
-                $meals = $this->filterCategory($meals);
-                $meals = $this->filterTime($meals);
-            } else {
-                $meals = MealItem::with($withParam)->orWhereHas('MealTag', function ($q) use ($tags) {
-                    $q->whereIn('id', $tags);
-                }, '>=', count($tags))->has('MealIngredient');
-                $meals = $this->filterCategory($meals);
-            }
-        } else {
-            if ($this->time != null) {
-                $meals = MealItem::withTrashed()->with($withParam)->has('MealTag')->has('MealIngredient');
-                $meals = $this->filterCategory($meals);
 
-                $meals = $this->filterTime($meals);
-            } else {
-                $meals = MealItem::with($withParam)->has('MealTag')->has('MealIngredient');
-                $meals = $this->filterCategory($meals);
-            }
+        //Check wether we need trashed items
+        if ($this->time != null) {
+            $meals = MealItem::withTrashed();
+        } else {
+            $meals = MealItem::withoutTrashed();
         }
+        $meals = $meals->with($withParam);
+        //Filter by tags
+        $t = explode(',', $this->tags);
+        $tags = MealTag::findMany($t)->pluck('id');
+        $meals = MealItem::withTrashed()->with($withParam)->orWhereHas('MealTag', function ($q) use ($tags) {
+            $q->whereIn('id', $tags);
+        }, '>=', count($tags))->has('MealIngredient');
+
+        //Filter the time
+        $meals = $this->filterTime($meals);
+        //Filter the category
+        $meals = $this->filterCategory($meals);
+        //Return to controller
         return $meals;
     }
     private function filterCategory($meals)
     {
-        if ($this->category != null) {
-            if ($this->category === 'null') {
-                return $meals->where('meal_category_id', null);
-            } else if ($this->category === '!null') {
-                return $meals->where('meal_category_id', '!=', null);
-            } else {
-                return $meals->where('meal_category_id', $this->category);
-            }
-        } else {
+        if ($this->category === null) {
+            //Since if we send null it will be a string
             return $meals;
         }
+        switch ($this->category) {
+            case 'null':
+                $meals = $meals->where('meal_category_id', NULL);
+                break;
+            case '!null':
+                $meals = $meals->whereNotNull('meal_category_id');
+                break;
+            default:
+                $meals = $meals->where('meal_category_id', $this->category);
+                break;
+        }
+        //Return the filtered value
+        return $meals;
     }
     private function filterTime($meals)
     {
+        //Check wether we actually need to filter
+        if (!isset($this->time)) {
+            return $meals;
+        }
         $date = Carbon::createFromTimestamp($this->time)->format('Y-m-d h:i:s');
-        return $meals->where('deleted_at', '>=', $date)->orWhere('deleted_at', null);
+        $meals = $meals->where(function ($q) use ($date) {
+            $q->where('created_at', '>=', $date)
+                ->orWhere('deleted_at', '>=', $date)
+                ->orWhere('created_at', '>=', $date);
+        });
+        return $meals;
     }
 }
