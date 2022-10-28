@@ -3,8 +3,9 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\PaginatedResourceResponseOverrider;
 
-class MealItemResource extends JsonResource
+class MealItemResource extends PaginatedResourceResponseOverrider
 {
     /**
      * Transform the resource into an array.
@@ -14,19 +15,17 @@ class MealItemResource extends JsonResource
      */
     public function toArray($request)
     {
-        if($this->deleted_at != null){
+        if ($this->deleted_at != null) {
             $status = 'Deleted';
-        }
-        else if($this->created_at == $this->updated_at && $this->deleted_at === null){
+        } else if ($this->created_at == $this->updated_at && $this->deleted_at === null) {
             $status = 'Created';
-        }
-        else if($this->created_at != $this->updated_at && $this->deleted_at === null){
+        } else if ($this->created_at != $this->updated_at && $this->deleted_at === null) {
             $status = 'Updated';
         }
         return [
             'id' => $this->id,
-            'title'=> $this->getTranslation('title', $request->lang, true),
-            'description'=> $this->getTranslation('description', $request->lang, true),
+            'title' => $this->getTranslation('title', $request->lang, true),
+            'description' => $this->getTranslation('description', $request->lang, true),
             'status' => $status,
             'category' => new MealCategoryResource($this->whenLoaded('MealCategory')),
             'tags' => MealTagResource::collection($this->whenLoaded('MealTag')),
