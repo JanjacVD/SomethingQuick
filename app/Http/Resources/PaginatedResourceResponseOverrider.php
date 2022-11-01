@@ -1,15 +1,13 @@
 <?php
 
-namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Http\Resources\Json\PaginatedResourceResponse;
 use Illuminate\Support\Facades\Request;
 
-class PaginatedResourceResponseOverrider extends JsonResource
+class PaginatedResourceResponseOverrider
 {
     protected function paginationLinks($paginated)
     {
+
         $queryString = (Request::getPathInfo() . (Request::getQueryString()) ? ('&' . Request::getQueryString()) : '');
         $queryStringNoPage = str_replace('&page=' . $paginated['current_page'], '', $queryString);
         return [
@@ -18,15 +16,18 @@ class PaginatedResourceResponseOverrider extends JsonResource
             'self' => url()->full(),
         ];
     }
-
     protected function meta($paginated)
     {
-        $metaData = parent::meta($paginated);
+
         return [
-            "currentPage" => $metaData['current_page'],
-            "totalItems" => $metaData['total'],
-            "itemsPerPage" => $metaData['per_page'],
-            "totalPages" => $metaData['last_page']
+            "currentPage" => $paginated['current_page'],
+            "totalItems" => $paginated['total'],
+            "itemsPerPage" => $paginated['per_page'],
+            "totalPages" => $paginated['last_page']
         ];
     }
 }
+
+
+//Put this is PaginatedResourceResponse in Illuminate\Http\Resources\Json; replace the 2 methods with these and it should work
+//Sorry thats the only way i found it working

@@ -3,16 +3,9 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\PaginatedResourceResponseOverrider;
 
-class MealItemResource extends PaginatedResourceResponseOverrider
+class MealItemResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
-     */
     public function toArray($request)
     {
         if ($this->deleted_at != null) {
@@ -22,6 +15,7 @@ class MealItemResource extends PaginatedResourceResponseOverrider
         } else if ($this->created_at != $this->updated_at && $this->deleted_at === null) {
             $status = 'Updated';
         }
+
         return [
             'id' => $this->id,
             'title' => $this->getTranslation('title', $request->lang, true),
